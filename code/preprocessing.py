@@ -24,11 +24,11 @@ violations_gdf = gpd.GeoDataFrame(
 
 violations_gdf.to_file(output_violations)
 
-# Process ordinance violations
+# Process ordinance violations:
 raw_ordinance = script_dir / '../data/raw-data/Ordinance_Violations_(Buildings)_2024-2026.csv'
 output_ordinance = script_dir / '../data/derived-data/Ordinance_Violations_2024-2026.gpkg'
 
-ordinance_df = pd.read_csv(raw_violations)
+ordinance_df = pd.read_csv(raw_ordinance)
 ordinance_gdf = gpd.GeoDataFrame(
     ordinance_df,
     geometry=gpd.points_from_xy(
