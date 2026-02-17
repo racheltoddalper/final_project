@@ -22,6 +22,7 @@ violations_gdf = gpd.GeoDataFrame(
     crs="EPSG:4326"   
 )
 
+violations_gdf = violations_gdf.to_crs("ESRI:102003")
 violations_gdf.to_file(output_violations)
 
 # Process ordinance violations:
@@ -38,4 +39,15 @@ ordinance_gdf = gpd.GeoDataFrame(
     crs="EPSG:4326"   
 )
 
-# Merge building and ordinance violations with ACS income data
+ordinance_gdf = ordinance_gdf.to_crs("ESRI:102003")
+ordinance_gdf.to_file(output_ordinance)
+
+# Process ACS income data taken from https://data2.nhgis.org/main to get tract level population and per capita income
+tracts = gpd.read_file(script_dir / "../data/raw-data/shapefiles/US_tract_2024.shp")
+acs_data = pd.read_csv(script_dir / '../data/raw-data/income_tract.csv')
+
+acs_gdf = tracts.merge(acs_data, on="GISJOIN", how="inner")
+
+acs_gdf.to_file(script_dir / '../data/derived-data/income_tract.gpkg')
+
+# Merge building and ordinance violation data with ACS income data
