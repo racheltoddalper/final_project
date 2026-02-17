@@ -47,7 +47,32 @@ tracts = gpd.read_file(script_dir / "../data/raw-data/shapefiles/US_tract_2024.s
 acs_data = pd.read_csv(script_dir / '../data/raw-data/income_tract.csv')
 
 acs_gdf = tracts.merge(acs_data, on="GISJOIN", how="inner")
+acs_gdf = acs_gdf.rename(columns={"AUO6E001": "population", "AUSYE001": "per_cap_inc"})
+acs_subset = acs_gdf[["population", "per_cap_inc", "geometry", "GEOID"]]
 
-acs_gdf.to_file(script_dir / '../data/derived-data/income_tract.gpkg')
+acs_subset.to_file(script_dir / '../data/derived-data/income_tract.gpkg')
 
 # Merge building and ordinance violation data with ACS income data
+violations_merged_gdf = gpd.sjoin(
+    violations_gdf,
+    acs_subset,
+    how="left",
+    predicate="within"
+)
+
+ordinance_merged_gdf = gpd.sjoin(
+    ordinance_gdf,
+    acs_subset,
+    how="left",
+    predicate="within"
+)
+
+violations_merged_gdf.to_file(
+    script_dir / '../data/derived-data/Building_Violations_w_ACS.gpkg',
+    driver="GPKG"
+)
+
+ordinance_merged_gdf.to_file(
+    script_dir / '../data/derived-data/Ordinance_Violations_w_ACS.gpkg',
+    driver="GPKG"
+)
