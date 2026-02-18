@@ -76,3 +76,72 @@ ordinance_merged_gdf.to_file(
     script_dir / '../data/derived-data/Ordinance_Violations_w_ACS.gpkg',
     driver="GPKG"
 )
+
+# aggregate to tract - month level for number of violations per capita since 2024
+violations_merged_gdf["VIOLATION DATE"] = pd.to_datetime(
+    violations_merged_gdf["VIOLATION DATE"],
+    errors="coerce"
+)
+violations_merged_gdf["year"] = violations_merged_gdf["VIOLATION DATE"].dt.year
+violations_merged_gdf["month"] = violations_merged_gdf["VIOLATION DATE"].dt.month
+violations_merged_gdf["year_month"] = violations_merged_gdf["VIOLATION DATE"].dt.to_period("M")
+
+violations_tract_month = (
+    violations_merged_gdf
+    .groupby(["GEOID", "year_month"])
+    .size()
+    .reset_index(name="violations_count")
+)
+
+tract_characteristics = (
+    violations_merged_gdf[["GEOID", "population", "per_cap_inc"]]
+    .drop_duplicates()
+)
+
+tract_characteristics = tract_characteristics[
+    tract_characteristics["per_cap_inc"] > 0
+]
+
+violations_tract_month = violations_tract_month.merge(
+    tract_characteristics,
+    on="GEOID",
+    how="inner"
+)
+
+violations_tract_month["violations_per_1000"] = (
+    violations_tract_month["violations_count"] /
+    violations_tract_month["population"] * 1000
+)
+
+violations_tract_month.to_csv(
+    script_dir / '../data/derived-data/tract_month_level_violations.csv',
+    index=False
+)
+
+#### exploratory plots 
+import matplotlib.pyplot as plt
+
+tract_level = (
+    violations_tract_month
+    .groupby("GEOID")
+    .agg({
+        "violations_per_1000": "mean",
+        "per_cap_inc": "first"
+    })
+    .reset_index()
+)
+
+plt.figure()
+
+plt.scatter(
+    tract_level["per_cap_inc"],
+    tract_level["violations_per_1000"],
+    alpha=0.4
+)
+
+plt.xlabel("Per Capita Income")
+plt.ylabel("Avg Violations per 1,000")
+
+plt.title("Average Violations vs Income (Tract Level)")
+
+plt.show()
