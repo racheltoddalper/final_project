@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 from shapely import wkt
 import os
+import numpy as np
 
 current_wd = os.getcwd()
 print(f"Working directory is now: {current_wd}")
@@ -67,6 +68,40 @@ ordinance_merged_gdf = gpd.sjoin(
     predicate="within"
 )
 
+# create categories for violation description
+desc = violations_gdf["VIOLATION DESCRIPTION"].str.upper()
+
+conditions = [
+    desc.str.contains("FIRE|SMOKE|CARB|EGRESS|EXIT|PANIC|SPRINKLER|CORRIDOR", na=False),
+    
+    desc.str.contains("WIRING|OUTLET|BREAKER|CONDUIT|CIRCUIT|GROUND|ELECTR|FEEDER", na=False),
+    
+    desc.str.contains("PLUMB|WATER|SEWER|DRAIN|PIPE|TRAP|WASTE|FLUSH|BACKWATER|FAUCET", na=False),
+    
+    desc.str.contains("HEAT|BOILER|FURNACE|VENT|BREECHING|RELIEF VALVE|HWH", na=False),
+    
+    desc.str.contains("ROOF|FOUNDATION|WALL|CHIMNEY|PORCH|BALCONY|PARAPET|LINTEL|STRUCTURAL", na=False),
+    
+    desc.str.contains("RAT|ROACH|MICE|INSECT|UNSANITARY|GARBAGE|DEBRIS|NUISANCE|PIGEON", na=False),
+    
+    desc.str.contains("WINDOW|DOOR|FLOOR|PAINT|SILL|SCREEN|LOCK|GLASS|CEILING", na=False),
+    
+    desc.str.contains("PERMIT|PLANS|REGISTER|CERTIFICATE|LICENSE|POST|APPROVAL|REGISTRATION|CONTRACTOR|C OF O", na=False)
+]
+
+choices = [
+    "Fire & Life Safety",
+    "Electrical",
+    "Plumbing & Water",
+    "Heating / HVAC / Boilers",
+    "Structural / Building Envelope",
+    "Sanitation / Pests / Waste",
+    "Windows / Doors / Interior",
+    "Permits / Administrative"
+]
+
+violations_merged_gdf["violation_category"] = np.select(conditions, choices, default="Other / Misc")
+
 violations_merged_gdf.to_file(
     script_dir / '../data/derived-data/Building_Violations_w_ACS.gpkg',
     driver="GPKG"
@@ -78,19 +113,33 @@ ordinance_merged_gdf.to_file(
 )
 
 # aggregate to tract - month level for number of violations per capita since 2024
-violations_merged_gdf["VIOLATION DATE"] = pd.to_datetime(
-    violations_merged_gdf["VIOLATION DATE"],
-    errors="coerce"
+violations_by_type = (
+    violations_merged_gdf
+    .groupby(["GEOID", "year_month", "violation_category"])
+    .size()
+    .reset_index(name="count")
 )
-violations_merged_gdf["year"] = violations_merged_gdf["VIOLATION DATE"].dt.year
-violations_merged_gdf["month"] = violations_merged_gdf["VIOLATION DATE"].dt.month
-violations_merged_gdf["year_month"] = violations_merged_gdf["VIOLATION DATE"].dt.to_period("M")
 
-violations_tract_month = (
+violations_by_type_wide = (
+    violations_by_type
+    .pivot(index=["GEOID", "year_month"],
+           columns="violation_category",
+           values="count")
+    .fillna(0)
+    .reset_index()
+)
+
+total_violations = (
     violations_merged_gdf
     .groupby(["GEOID", "year_month"])
     .size()
     .reset_index(name="violations_count")
+)
+
+violations_tract_month = violations_by_type_wide.merge(
+    total_violations,
+    on=["GEOID", "year_month"],
+    how="left"
 )
 
 tract_characteristics = (
@@ -113,35 +162,32 @@ violations_tract_month["violations_per_1000"] = (
     violations_tract_month["population"] * 1000
 )
 
+category_cols = [
+    col for col in violations_tract_month.columns
+    if col not in ["GEOID", "year_month", "violations_count",
+                   "population", "per_cap_inc",
+                   "violations_per_1000"]
+]
+
+for col in category_cols:
+    violations_tract_month[f"{col}_per_1000"] = (
+        violations_tract_month[col] /
+        violations_tract_month["population"] * 1000
+    )
+
 violations_tract_month.to_csv(
     script_dir / '../data/derived-data/tract_month_level_violations.csv',
     index=False
 )
 
-#### exploratory plots 
-import matplotlib.pyplot as plt
-
-tract_level = (
-    violations_tract_month
-    .groupby("GEOID")
-    .agg({
-        "violations_per_1000": "mean",
-        "per_cap_inc": "first"
-    })
-    .reset_index()
+# Save spatial file version
+violations_tract_month_gdf = tracts.merge(
+    violations_tract_month,
+    on="GEOID",
+    how="left"
 )
 
-plt.figure()
-
-plt.scatter(
-    tract_level["per_cap_inc"],
-    tract_level["violations_per_1000"],
-    alpha=0.4
+violations_tract_month_gdf.to_file(
+    script_dir / '../data/derived-data/tract_month_level_violations.geojson',
+    driver="GeoJSON"
 )
-
-plt.xlabel("Per Capita Income")
-plt.ylabel("Avg Violations per 1,000")
-
-plt.title("Average Violations vs Income (Tract Level)")
-
-plt.show()
