@@ -112,6 +112,57 @@ ordinance_merged_gdf.to_file(
     driver="GPKG"
 )
 
+# merge violations and ordinance
+for df in [violations_merged_gdf, ordinance_merged_gdf]:
+    df["ADDRESS"] = df["ADDRESS"].str.strip().str.upper()
+    df["VIOLATION DESCRIPTION"] = df["VIOLATION DESCRIPTION"].str.strip().str.upper()
+
+ordinance_merged_gdf["HEARING DATE"] = pd.to_datetime(ordinance_merged_gdf["HEARING DATE"])
+
+
+violations_merged_gdf["VIOLATION DATE"] = pd.to_datetime(
+    violations_merged_gdf["VIOLATION DATE"],
+    errors="coerce"
+)
+
+ordinance_merged_gdf["VIOLATION DATE"] = pd.to_datetime(
+    ordinance_merged_gdf["VIOLATION DATE"],
+    errors="coerce"
+)
+
+violations_merged_gdf["VIOLATION DATE"] = violations_merged_gdf["VIOLATION DATE"].dt.date
+ordinance_merged_gdf["VIOLATION DATE"] = ordinance_merged_gdf["VIOLATION DATE"].dt.date
+
+ordinance_dedup = (
+    ordinance_merged_gdf
+    .sort_values("HEARING DATE")
+    .drop_duplicates(
+        subset=["ADDRESS", "VIOLATION DATE", "VIOLATION DESCRIPTION"],
+        keep="last"
+    )
+)
+
+ordinance_dedup["VIOLATION DESCRIPTION"] = (
+    ordinance_dedup["VIOLATION DESCRIPTION"]
+        .str.replace(r"^\S+\s+", "", regex=True)  
+        .str.replace(r"\.$", "", regex=True)      
+        .str.strip()
+        .str.upper()
+)
+
+violations_ordinance_merged = violations_merged_gdf.merge(
+    ordinance_dedup[
+        ["ADDRESS",
+         "VIOLATION DATE",
+         "VIOLATION DESCRIPTION",
+         "CASE DISPOSITION",
+         "IMPOSED FINE"]
+    ],
+    on=["ADDRESS", "VIOLATION DATE", "VIOLATION DESCRIPTION"],
+    how="left",
+    validate="m:1"
+)
+
 # aggregate to tract - month level for number of violations per capita since 2024
 violations_by_type = (
     violations_merged_gdf

@@ -11,8 +11,11 @@ current_wd = os.getcwd()
 print(f"Working directory is now: {current_wd}")
 script_dir = Path(current_wd)
 
-violation_level = gpd.read_file(script_dir / '../data/derived-data/Building_Violations_w_ACS.gpkg')
+violations_gdf = gpd.read_file(script_dir / '../data/derived-data/Building_Violations_w_ACS.gpkg')
+violations_gdf = violations_gdf.to_crs(epsg=4326)
 tract_month_level = pd.read_csv(script_dir / '../data/derived-data/tract_month_level_violations.csv')
+
+ordinance_gdf = gpd.read_file(script_dir / '../data/derived-data/Ordinance_Violations_w_ACS.gpkg')
 
 violation_type_cols = [
     col for col in tract_month_level.columns
