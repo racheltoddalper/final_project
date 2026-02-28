@@ -8,7 +8,6 @@
 # add address to map tooltip
 # consider adding a category for all
 
-from altair.vegalite.v5.api import Chart
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
