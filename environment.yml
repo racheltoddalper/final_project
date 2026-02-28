@@ -1,4 +1,4 @@
-name: fire_analysis
+name: final_project
 channels:
   - conda-forge
 dependencies:
@@ -7,3 +7,5 @@ dependencies:
   - geopandas
   - matplotlib
   - shapely
+  - altair
+  - pydeck
