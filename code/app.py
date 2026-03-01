@@ -4,7 +4,6 @@
 # to do: 
 # fix tooltips on first two graphs
 # remove categories: other and permits
-# fix cropping of scatterplot
 # add address to map tooltip
 # consider adding a category for all
 
@@ -33,6 +32,12 @@ def load_data():
     gdf["violation_date"] = gdf["violation_date"].dt.strftime("%Y-%m-%d")
     #gdf["violation_date"] = pd.to_datetime(gdf["violation_date"])
     #gdf["year_month"] = gdf["violation_date"].dt.to_period("M").astype(str)
+
+    gdf= gdf[
+    ~gdf["violation_category"].isin(
+        ["Permits / Administrative", "Other / Misc"]
+    )
+].copy()
 
     return gdf
 
@@ -150,6 +155,17 @@ quintile_category_summary["category_violations_per_1000"] = (
     quintile_category_summary["weighted_avg_violations_per_1000"]
 )
 
+label_map = {
+    "PERIODIC": "Periodic",
+    "COMPLAINT": "Complaint",
+    "PERMIT": "Permit Inspection"
+}
+
+quintile_category_summary["INSPECTION CATEGORY"] = (
+    quintile_category_summary["INSPECTION CATEGORY"]
+    .replace(label_map)
+)
+
 st.write("Number of violations shown:", len(filtered))
 
 st.subheader("Violations per 1,000 vs Per Capita Income (Tract Level)")
@@ -179,8 +195,8 @@ bar_chart = alt.Chart(quintile_category_summary).mark_bar().encode(
 )
 
 scatter = alt.Chart(tract_level).mark_circle(size=60, opacity=0.6).encode(
-    x=alt.X("per_cap_inc:Q", title="Per Capita Income"),
-    y=alt.Y("violations_per_1000:Q", title="Violations per 1,000 Residents"),
+    x=alt.X("per_cap_inc:Q", title="Per Capita Income", scale=alt.Scale(domainMin=0)),
+    y=alt.Y("violations_per_1000:Q", title="Violations per 1,000 Residents", scale=alt.Scale(domainMin=0)),
     tooltip=[
         "GEOID",
         "per_cap_inc",
@@ -188,15 +204,13 @@ scatter = alt.Chart(tract_level).mark_circle(size=60, opacity=0.6).encode(
         "violations"
     ]
 )
-
 trendline = alt.Chart(tract_level).transform_regression(
     "per_cap_inc",
     "violations_per_1000"
-).mark_line(size=3, color="black").encode(
-    x="per_cap_inc:Q",
-    y="violations_per_1000:Q"
+).mark_line(size=3, color="steelblue").encode(
+    x=alt.X("per_cap_inc:Q", scale=alt.Scale(domainMin=0)),
+    y=alt.Y("violations_per_1000:Q", scale=alt.Scale(domainMin=0))
 )
-
 chart = (scatter + trendline).properties(
     width=700,
     height=500
