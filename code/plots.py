@@ -132,7 +132,7 @@ quintile_category_summary["category_violations_per_1000"] = (
 label_map = {
     "PERIODIC": "Periodic",
     "COMPLAINT": "Complaint",
-    "PERMIT": "License Inspection"
+    "PERMIT": "Permit Inspection"
 }
 
 quintile_category_summary["INSPECTION CATEGORY"] = (
