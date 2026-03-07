@@ -1,6 +1,6 @@
-# Fire Perimeter Analysis
+# Chicago Building Code Violations 
 
-This project processes and visualizes historical fire perimeter data and Canadian CPI data.
+This project processes and visualizes data on building code violations in Chicago and how they vary with income. 
 
 ## Setup
 
@@ -26,12 +26,16 @@ code/
 
 ## Usage
 
-1. Run preprocessing to filter data:
+1. Download data:
+
+2. Run preprocessing to filter data:
    ```bash
    python code/preprocessing.py
    ```
 
-2. Generate the fire perimeter plot:
+3. Generate the fire perimeter plot:
    ```bash
    python code/plot_fires.py
    ```
+
+4. Link to Streamlit app:
