@@ -15,28 +15,23 @@ pip install -r requirements.txt
 ```
 data/
   raw-data/           # Raw data files
-    fire.csv          # Historical fire perimeter data
-    canadian_cpi.csv  # Canadian Consumer Price Index data
+    Building_Violations_2024-2026   # Chicage building violation-level data
+    income_tract.csv  # ACS tract-level income and population data
+    shapefiles        # tract shapefiles to merge with ACS data
   derived-data/       # Filtered data and output plots
-    fire_filtered.gpkg  # Fire data filtered to post-2015
-    cpi_filtered.csv    # CPI data filtered to 2020 onwards
+    
 code/
-  preprocessing.py    # Filters fire and CPI data
-  plot_fires.py       # Plots fire perimeters
+  preprocessing.py    # processes and merges tract geometries, tract - level income data, and violations data
+  plot_fires.py       # plots static plots 
 ```
 
 ## Usage
 
-1. Download data:
+1. Download data at this link and save to data/raw-data:
 
-2. Run preprocessing to filter data:
+2. Render final writeup:
    ```bash
-   python code/preprocessing.py
+   quarto render final_project.qmd
    ```
 
-3. Generate the fire perimeter plot:
-   ```bash
-   python code/plot_fires.py
-   ```
-
-4. Link to Streamlit app: https://finalproject-rachel.streamlit.app
+3. Link to Streamlit app: https://finalproject-rachel.streamlit.app
