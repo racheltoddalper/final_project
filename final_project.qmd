@@ -20,9 +20,28 @@ include-before-body:
       breaklines
     }
 ---
+Lecture Section: T Th 11am 
+GitHub username: racheltoddalper
 
 ```{python}
+#| echo: false
+#| eval: true
 import altair as alt
 alt.renderers.enable("png", ppi=200)
 import pandas as pd
 ```
+
+### Reasearch Question
+
+### Data Processing
+- explanation for averaging
+
+### Findings 
+**Static Figures**
+
+**Streamlit App**
+
+### Data Limitations
+- why can't get rate of violations
+
+### Policy Implications
