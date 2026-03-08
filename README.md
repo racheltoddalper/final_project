@@ -5,8 +5,9 @@ This project processes and visualizes data on building code violations in Chicag
 ## Setup
 
 ```bash
-conda env create -f environment.yml
-conda activate fire_analysis
+conda create --name violations_analysis python=3.11
+conda activate violations_analysis
+pip install -r requirements.txt
 ```
 
 ## Project Structure
@@ -38,4 +39,4 @@ code/
    python code/plot_fires.py
    ```
 
-4. Link to Streamlit app:
+4. Link to Streamlit app: https://finalproject-rachel.streamlit.app

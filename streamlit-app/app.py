@@ -1,12 +1,3 @@
-# Dashboard code will go here. 
-
-
-# to do: 
-# fix tooltips on first two graphs
-# remove categories: other and permits
-# add address to map tooltip
-# consider adding a category for all
-
 import streamlit as st
 import pandas as pd
 import geopandas as gpd
