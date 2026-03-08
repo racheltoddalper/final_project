@@ -1,5 +1,4 @@
 ---
-title: "Building Code Violations in Chicago and Income"
 format: 
   pdf:
     keep-tex: true
@@ -20,8 +19,10 @@ include-before-body:
       breaklines
     }
 ---
-Lecture Section: T Th 11am 
-GitHub username: racheltoddalper
+\vspace{-2cm}
+## Chicago Building Code Violations and Income
+**Name:** Rachel Alper, **Lecture Section:** T Th 11am, **GitHub username:** racheltoddalper
+\vspace{-1cm}
 
 ```{python}
 #| echo: false
@@ -113,10 +114,19 @@ violations_merged_gdf.to_file(
 
 ```
 
-### Reasearch Question
+### Motivation and Reasearch Question
+Chicago has a code for how buildings are maintained and used, and residents can report violations by calling 311 or through an online for. If an inspector visits the building and finds violations, they will issue a citation. Inspectors can also find violations during routine or permit inspections. Chicago provides publicly available violation-level data, which I combined with income data to answer my research question: are building code enforcement patterns in Chicago distributed equitably across community areas, or do neighborhoods with different socioeconomic compositions experience different rates of inspections and violations?
 
-### Data Processing
-- explanation for averaging
+### Data and Data Processing
+I used two main datasets, plus tract-level shapefiles to combine with the tract-level income data. I got income and population data from the [American Community Survey (ACS)]("https://usa.ipums.org/usa/index.shtml"), and used the [City of Chicago Data Portal Building Violations by Address]("https://data.cityofchicago.org/Buildings/Building-Violations-by-Address/wicw-drfk/about_data") dataset for the violations. Key variables included:
+- date, latitude and longitude coordinates, violation description
+- Inspection category: 311 complaint, periodic inspection, or permit inspection
+- Violation status: indicates if violation has been addressed
+
+To process my data for the analysis, I first spatially joined the violations data, which had point coordinates, with the tract-level income and population data. Then, I used population data to normalize the number of violations per tract to violations per 1000 residents. Finally, I used AI to categorize the over 200 unique violation descriptions into 7 categories: Windows / Doors / Interior, Structural / Building Envelope, Heating / HVAC / Boilers, Fire & Life Safety, Sanitation / Pests / Waste, Plumbing & Water, Electrical
+
+For the figures, which are at the tract level, I aggregated the data to the tract level, and sorted the tracts into income quintiles based on the tract-level income data. I then took a population-weighted mean number of violations per 1000 residents. I did this to get the violations faced by the average resident, not the average tract. 
+
 
 ### Findings 
 **Static Figures**
@@ -266,7 +276,7 @@ bar_chart = alt.Chart(quintile_category_summary).mark_bar().encode(
     )
 ).properties(
     width=400,
-    height=500,
+    height=400,
     title="Violations per 1,000 Residents by Income Quintile"
 )
 bar_chart
@@ -352,7 +362,7 @@ heatmap = alt.Chart(heatmap_data).mark_rect().encode(
     )
 ).properties(
     width=400,
-    height=350,
+    height=300,
     title="Violations per 1,000 by Income Quintile and Category"
 )
 
