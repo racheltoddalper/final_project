@@ -1,23 +1,11 @@
 ---
 format: 
-  pdf:
+  html:
     keep-tex: true
-    include-in-header: 
-       text: |
-         \usepackage{fvextra}
-         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
 execute:
   echo: false
   warning: false
   message: false
-include-before-body:
-  text: |
-    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
-      showspaces = false,
-      showtabs = false,
-      breaksymbolleft={},
-      breaklines
-    }
 ---
 \vspace{-2cm}
 ## Chicago Building Code Violations and Income
@@ -129,7 +117,8 @@ For the figures, which are at the tract level, I aggregated the data to the trac
 
 
 ### Findings 
-**Static Figures**
+
+My first figure shows the average number of complaints per 1000 by income quintile, and suggests that lower income tracts have more violations, driven primarily by having more violations stemming from complaints. The quintiles have relatively similar average numbers of violations from permit and routine inspections (though the higherst quintile does have more permit inspections), but the number of violations from complaints signficantly decreases with income. 
 ```{python}
 #| echo: false
 #| eval: true
@@ -275,14 +264,14 @@ bar_chart = alt.Chart(quintile_category_summary).mark_bar().encode(
         title="Inspection Category"
     )
 ).properties(
-    width=400,
-    height=400,
+    width=300,
+    height=300,
     title="Violations per 1,000 Residents by Income Quintile"
 )
 bar_chart
 
 ```
-
+My second figure shows the average violations by quintile, but divided by violation category. From this figure, we can see that categories with the most violations have more violations in the lower income quantiles. Specifically, these categories are Structural / Building Envelope, Windows / Doors / Interior, and Fire and Life Safety.
 ```{python}
 #| echo: false
 #| eval: true
@@ -361,17 +350,17 @@ heatmap = alt.Chart(heatmap_data).mark_rect().encode(
         scale=alt.Scale(scheme="blues")
     )
 ).properties(
-    width=400,
-    height=300,
+    width=300,
+    height=250,
     title="Violations per 1,000 by Income Quintile and Category"
 )
 
 heatmap
 ```
 
-**Streamlit App**
+![Screenshot from map portion of dashboard](figures/interactive_map_screenshot.png)
+My Streamlit App is available here: https://finalproject-rachel.streamlit.app (but may need to be woken up before using). Users can select which category they want to view, and then the app will display a scatterplot of tracts, with violations per 1000 on the y-axis and income on the x-axis. The app will also display my first static figure but restricted to the selected cateogry. Finally, an interactive app plotting each violation is shown, with the points colored by whether the violation has been resolved or not. The tooltip also gives the original violation description. 
 
-### Data Limitations
-- why can't get rate of violations
+### Data Limitations, Policy Implications, and Further Questions
+Ultimately, the higher number of violations in low income areas could be due to several factors. Lower income areas have more renters, who would be more likely to file complaints than people in owner-occupied residences. If residents in low income areas face worse building conditions, the policy takeaway here would be to increase resources for complaint-driven enforcement, and ask why routine inspections aren't catching what residents are already seeing. One additional question would be does the rate at which a complaint leads to a violation vary by income? However, one limitation of the data that I used is that it does not have complaints which did not lead to violations, so this would require using a different datset which was outside the scope of the project. 
 
-### Policy Implications
