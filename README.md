@@ -5,7 +5,7 @@ This project processes and visualizes data on building code violations in Chicag
 ## Setup
 
 ```bash
-conda create --name violations_analysis python=3.11
+conda create --name violations_analysis python=3.12
 conda activate violations_analysis
 pip install -r requirements.txt
 ```
@@ -14,11 +14,12 @@ pip install -r requirements.txt
 
 ```
 data/
-  raw-data/           # Raw data files
-    Building_Violations_2024-2026   # Chicage building violation-level data
-    income_tract.csv  # ACS tract-level income and population data
-    shapefiles        # tract shapefiles to merge with ACS data
-  derived-data/       # Filtered data and output plots
+  raw-data/        
+    Building_Violations_2024-2026     # Chicage building violation-level data
+    income_tract.csv                  # ACS tract-level income and population data
+    shapefiles                        # tract shapefiles to merge with ACS data
+  derived-data/  
+    Building_Violations_w_ACS.gpkg    # Filtered data and output plots
     
 code/
   preprocessing.py    # processes and merges tract geometries, tract - level income data, and violations data
@@ -27,9 +28,9 @@ code/
 
 ## Usage
 
-1. Download data at this link and save to data/raw-data:
+1. Download data at this link and save to data/raw-data: https://drive.google.com/drive/folders/1tY-eNjCnLrwOUHAuqI1LpQy-pJbz5_CG?usp=sharing
 
-2. Render final writeup:
+2. Render final writeup in html:
    ```bash
    quarto render final_project.qmd
    ```
