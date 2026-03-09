@@ -1,28 +1,366 @@
 ---
-title: "Building Code Violations in Chicago and Income"
 format: 
-  pdf:
+  html:
     keep-tex: true
-    include-in-header: 
-       text: |
-         \usepackage{fvextra}
-         \DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
 execute:
   echo: false
   warning: false
   message: false
-include-before-body:
-  text: |
-    \RecustomVerbatimEnvironment{verbatim}{Verbatim}{
-      showspaces = false,
-      showtabs = false,
-      breaksymbolleft={},
-      breaklines
-    }
 ---
+\vspace{-2cm}
+## Chicago Building Code Violations and Income
+**Name:** Rachel Alper, **Lecture Section:** T Th 11am, **GitHub username:** racheltoddalper
+\vspace{-1cm}
 
 ```{python}
+#| echo: false
+#| eval: true
 import altair as alt
 alt.renderers.enable("png", ppi=200)
 import pandas as pd
+import geopandas as gpd
+from pathlib import Path
+from shapely import wkt
+import os
+import numpy as np
+from turtle import title
+import matplotlib.pyplot as plt
+
+current_wd = os.getcwd()
+script_dir = Path(current_wd)
+
+# Process building violations 
+raw_violations = script_dir / 'data/raw-data/Building_Violations_2024-2026.csv'
+output_violations = script_dir / 'data/derived-data/Building_Violations_2024-2026.gpkg'
+
+violations_df = pd.read_csv(raw_violations)
+violations_gdf = gpd.GeoDataFrame(
+    violations_df,
+    geometry=gpd.points_from_xy(
+        violations_df['LONGITUDE'],
+        violations_df['LATITUDE']
+    ),
+    crs="EPSG:4326"   
+)
+
+violations_gdf = violations_gdf.to_crs("ESRI:102003")
+
+# Process ACS income data taken from https://data2.nhgis.org/main to get tract level population and per capita income
+tracts = gpd.read_file(script_dir / "data/raw-data/shapefiles/US_tract_2024.shp")
+acs_data = pd.read_csv(script_dir / 'data/raw-data/income_tract.csv')
+
+acs_gdf = tracts.merge(acs_data, on="GISJOIN", how="inner")
+acs_gdf = acs_gdf.rename(columns={"AUO6E001": "population", "AUSYE001": "per_cap_inc"})
+acs_subset = acs_gdf[["population", "per_cap_inc", "geometry", "GEOID"]]
+
+# Merge building and ordinance violation data with ACS income data
+violations_merged_gdf = gpd.sjoin(
+    violations_gdf,
+    acs_subset,
+    how="left",
+    predicate="within"
+)
+
+# create categories for violation description
+desc = violations_gdf["VIOLATION DESCRIPTION"].str.upper()
+
+conditions = [
+    desc.str.contains("FIRE|SMOKE|CARB|EGRESS|EXIT|PANIC|SPRINKLER|CORRIDOR", na=False),
+    
+    desc.str.contains("WIRING|OUTLET|BREAKER|CONDUIT|CIRCUIT|GROUND|ELECTR|FEEDER", na=False),
+    
+    desc.str.contains("PLUMB|WATER|SEWER|DRAIN|PIPE|TRAP|WASTE|FLUSH|BACKWATER|FAUCET", na=False),
+    
+    desc.str.contains("HEAT|BOILER|FURNACE|VENT|BREECHING|RELIEF VALVE|HWH", na=False),
+    
+    desc.str.contains("ROOF|FOUNDATION|WALL|CHIMNEY|PORCH|BALCONY|PARAPET|LINTEL|STRUCTURAL", na=False),
+    
+    desc.str.contains("RAT|ROACH|MICE|INSECT|UNSANITARY|GARBAGE|DEBRIS|NUISANCE|PIGEON", na=False),
+    
+    desc.str.contains("WINDOW|DOOR|FLOOR|PAINT|SILL|SCREEN|LOCK|GLASS|CEILING", na=False),
+    
+    desc.str.contains("PERMIT|PLANS|REGISTER|CERTIFICATE|LICENSE|POST|APPROVAL|REGISTRATION|CONTRACTOR|C OF O", na=False)
+]
+
+choices = [
+    "Fire & Life Safety",
+    "Electrical",
+    "Plumbing & Water",
+    "Heating / HVAC / Boilers",
+    "Structural / Building Envelope",
+    "Sanitation / Pests / Waste",
+    "Windows / Doors / Interior",
+    "Permits / Administrative"
+]
+
+violations_merged_gdf["violation_category"] = np.select(conditions, choices, default="Other / Misc")
+
+violations_merged_gdf.to_file(
+    script_dir / 'data/derived-data/Building_Violations_w_ACS.gpkg',
+    driver="GPKG"
+)
+
 ```
+
+### Motivation and Reasearch Question
+Chicago has a code for how buildings are maintained and used, and residents can report violations by calling 311 or through an online for. If an inspector visits the building and finds violations, they will issue a citation. Inspectors can also find violations during routine or permit inspections. Chicago provides publicly available violation-level data, which I combined with income data to answer my research question: are building code enforcement patterns in Chicago distributed equitably across community areas, or do neighborhoods with different socioeconomic compositions experience different rates of inspections and violations?
+
+### Data and Data Processing
+I used two main datasets, plus tract-level shapefiles to combine with the tract-level income data. I got income and population data from the [American Community Survey (ACS)]("https://usa.ipums.org/usa/index.shtml"), and used the [City of Chicago Data Portal Building Violations by Address]("https://data.cityofchicago.org/Buildings/Building-Violations-by-Address/wicw-drfk/about_data") dataset for the violations. Key variables included:
+- date, latitude and longitude coordinates, violation description
+- Inspection category: 311 complaint, periodic inspection, or permit inspection
+- Violation status: indicates if violation has been addressed
+
+To process my data for the analysis, I first spatially joined the violations data, which had point coordinates, with the tract-level income and population data. Then, I used population data to normalize the number of violations per tract to violations per 1000 residents. Finally, I used AI to categorize the over 200 unique violation descriptions into 7 categories: Windows / Doors / Interior, Structural / Building Envelope, Heating / HVAC / Boilers, Fire & Life Safety, Sanitation / Pests / Waste, Plumbing & Water, Electrical
+
+For the figures, which are at the tract level, I aggregated the data to the tract level, and sorted the tracts into income quintiles based on the tract-level income data. I then took a population-weighted mean number of violations per 1000 residents. I did this to get the violations faced by the average resident, not the average tract. 
+
+
+### Findings 
+
+My first figure shows the average number of complaints per 1000 by income quintile, and suggests that lower income tracts have more violations, driven primarily by having more violations stemming from complaints. The quintiles have relatively similar average numbers of violations from permit and routine inspections (though the higherst quintile does have more permit inspections), but the number of violations from complaints signficantly decreases with income. 
+```{python}
+#| echo: false
+#| eval: true
+
+current_wd = os.getcwd()
+script_dir = Path(current_wd)
+
+violations_gdf = gpd.read_file(script_dir / 'data/derived-data/Building_Violations_w_ACS.gpkg')
+violations_gdf = violations_gdf.to_crs(epsg=4326)
+
+violation_type_cols = [
+    col for col in violations_gdf.columns
+    if col not in ["GEOID", "year_month", "violations_count",
+                   "population", "per_cap_inc",
+                   "violations_per_1000"]
+]
+
+# STATIC FIGURE 1
+filtered = violations_gdf
+
+# Count violations by tract AND inspection category
+category_counts = (
+    filtered
+    .groupby(["GEOID", "INSPECTION CATEGORY"])
+    .size()
+    .reset_index(name="category_count")
+)
+
+# Get total violations per tract
+total_counts = (
+    filtered
+    .groupby("GEOID")
+    .size()
+    .reset_index(name="total_violations")
+)
+
+# Merge totals
+category_counts = category_counts.merge(
+    total_counts,
+    on="GEOID",
+    how="left"
+)
+
+# Calculate share within tract
+category_counts["category_share"] = (
+    category_counts["category_count"] /
+    category_counts["total_violations"]
+)
+
+# Aggregate to tract level
+tract_level = (
+    filtered
+    .groupby("GEOID")
+    .agg(
+        per_cap_inc=("per_cap_inc", "first"),
+        population=("population", "first"),
+        violations=("GEOID", "size")  
+    )
+    .reset_index()
+)
+
+# Calculate violations per 1,000 residents
+tract_level["violations_per_1000"] = (
+    tract_level["violations"] /
+    tract_level["population"]
+) * 1000
+
+tract_categories = category_counts.merge(
+    tract_level,
+    on="GEOID",
+    how="left"
+)
+
+tract_level["income_quintile"] = pd.qcut(
+    tract_level["per_cap_inc"],
+    5,
+    labels=["Q1 (Lowest)", "Q2", "Q3", "Q4", "Q5 (Highest)"]
+)
+
+tract_categories = tract_categories.merge(
+    tract_level[["GEOID", "income_quintile"]],
+    on="GEOID",
+    how="left"
+)
+
+# calculate population weighted mean
+quintile_totals = (
+    tract_level
+    .groupby("income_quintile")
+    .apply(lambda x: pd.Series({
+        "weighted_avg_violations_per_1000":
+            (x["violations_per_1000"] * x["population"]).sum() /
+            x["population"].sum()
+    }))
+    .reset_index()
+)
+
+quintile_category_shares = (
+    tract_categories
+    .groupby(["income_quintile", "INSPECTION CATEGORY"])
+    .apply(lambda x: pd.Series({
+        "weighted_share":
+            (x["category_share"] * x["population"]).sum() /
+            x["population"].sum()
+    }))
+    .reset_index()
+)
+
+quintile_category_summary = quintile_category_shares.merge(
+    quintile_totals,
+    on="income_quintile",
+    how="left"
+)
+
+quintile_category_summary["category_violations_per_1000"] = (
+    quintile_category_summary["weighted_share"] *
+    quintile_category_summary["weighted_avg_violations_per_1000"]
+)
+
+label_map = {
+    "PERIODIC": "Periodic",
+    "COMPLAINT": "Complaint",
+    "PERMIT": "Permit Inspection"
+}
+
+quintile_category_summary["INSPECTION CATEGORY"] = (
+    quintile_category_summary["INSPECTION CATEGORY"]
+    .replace(label_map)
+)
+
+bar_chart = alt.Chart(quintile_category_summary).mark_bar().encode(
+    x=alt.X(
+        "income_quintile:N",
+        title="Income Quintile",
+        axis=alt.Axis(labelAngle=0)
+    ),
+    y=alt.Y(
+        "category_violations_per_1000:Q",
+        title="Violations per 1,000 Residents"
+    ),
+    color=alt.Color(
+        "INSPECTION CATEGORY:N",
+        title="Inspection Category"
+    )
+).properties(
+    width=300,
+    height=300,
+    title="Violations per 1,000 Residents by Income Quintile"
+)
+bar_chart
+
+```
+My second figure shows the average violations by quintile, but divided by violation category. From this figure, we can see that categories with the most violations have more violations in the lower income quantiles. Specifically, these categories are Structural / Building Envelope, Windows / Doors / Interior, and Fire and Life Safety.
+```{python}
+#| echo: false
+#| eval: true
+
+# STATIC FIGURE 2
+filtered = violations_gdf[
+    ~violations_gdf["violation_category"].isin(
+        ["Permits / Administrative", "Other / Misc"]
+    )
+].copy()
+
+# Aggregate total violations per tract
+tract_level = (
+    filtered
+    .groupby("GEOID")
+    .agg(
+        per_cap_inc=("per_cap_inc", "first"),
+        population=("population", "first"),
+        total_violations=("GEOID", "size")
+    )
+    .reset_index()
+)
+
+# Income quintiles
+tract_level["income_quintile"] = pd.qcut(
+    tract_level["per_cap_inc"],
+    5,
+    labels=["Q1 (Lowest)", "Q2", "Q3", "Q4", "Q5 (Highest)"]
+)
+
+tract_category = (
+    filtered
+    .groupby(["GEOID", "violation_category"])
+    .size()
+    .reset_index(name="category_count")
+)
+
+tract_category = tract_category.merge(
+    tract_level[["GEOID", "population", "income_quintile"]],
+    on="GEOID",
+    how="left"
+)
+
+tract_category["category_violations_per_1000"] = (
+    tract_category["category_count"] /
+    tract_category["population"]
+) * 1000
+
+heatmap_data = (
+    tract_category
+    .groupby(["income_quintile", "violation_category"])
+    .apply(lambda x: pd.Series({
+        "weighted_violations_per_1000":
+            (x["category_violations_per_1000"] * x["population"]).sum()
+            / x["population"].sum()
+    }))
+    .reset_index()
+)
+
+quintile_order = ["Q1 (Lowest)", "Q2", "Q3", "Q4", "Q5 (Highest)"]
+
+heatmap = alt.Chart(heatmap_data).mark_rect().encode(
+    x=alt.X(
+        "income_quintile:N",
+        sort=quintile_order,
+        title="Income Quintile",
+        axis=alt.Axis(labelAngle=0)
+    ),
+    y=alt.Y(
+        "violation_category:N",
+        title="Violation Category"
+    ),
+    color=alt.Color(
+        "weighted_violations_per_1000:Q",
+        title="Violations per 1,000",
+        scale=alt.Scale(scheme="blues")
+    )
+).properties(
+    width=300,
+    height=250,
+    title="Violations per 1,000 by Income Quintile and Category"
+)
+
+heatmap
+```
+
+![Screenshot from map portion of dashboard](figures/interactive_map_screenshot.png)
+My Streamlit App is available here: https://finalproject-rachel.streamlit.app (but may need to be woken up before using). Users can select which category they want to view, and then the app will display a scatterplot of tracts, with violations per 1000 on the y-axis and income on the x-axis. The app will also display my first static figure but restricted to the selected cateogry. Finally, an interactive app plotting each violation is shown, with the points colored by whether the violation has been resolved or not. The tooltip also gives the original violation description. 
+
+### Data Limitations, Policy Implications, and Further Questions
+Ultimately, the higher number of violations in low income areas could be due to several factors. Lower income areas have more renters, who would be more likely to file complaints than people in owner-occupied residences. If residents in low income areas face worse building conditions, the policy takeaway here would be to increase resources for complaint-driven enforcement, and ask why routine inspections aren't catching what residents are already seeing. One additional question would be does the rate at which a complaint leads to a violation vary by income? However, one limitation of the data that I used is that it does not have complaints which did not lead to violations, so this would require using a different datset which was outside the scope of the project. 
+
