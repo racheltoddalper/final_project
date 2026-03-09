@@ -23,7 +23,7 @@ data/
     
 code/
   preprocessing.py    # processes and merges tract geometries, tract - level income data, and violations data
-  plot_fires.py       # plots static plots 
+  plots.py            # plots static plots 
 ```
 
 ## Usage
